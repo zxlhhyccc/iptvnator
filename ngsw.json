@@ -1,0 +1,96 @@
+{
+  "configVersion": 1,
+  "timestamp": 1595709721931,
+  "index": "/my-iptv-player-pwa/index.html",
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "cacheQueryOptions": {
+        "ignoreVary": true
+      },
+      "urls": [
+        "/my-iptv-player-pwa/background.js",
+        "/my-iptv-player-pwa/favicon.ico",
+        "/my-iptv-player-pwa/index.html",
+        "/my-iptv-player-pwa/main-es2015.d73a0d2cbb4a30b7f434.js",
+        "/my-iptv-player-pwa/main-es5.d73a0d2cbb4a30b7f434.js",
+        "/my-iptv-player-pwa/manifest.webmanifest",
+        "/my-iptv-player-pwa/polyfills-es2015.a0fa45e0fa52702b64f0.js",
+        "/my-iptv-player-pwa/polyfills-es5.ad488d10aedb20ee68c9.js",
+        "/my-iptv-player-pwa/runtime-es2015.409e6590615fb48d139f.js",
+        "/my-iptv-player-pwa/runtime-es5.409e6590615fb48d139f.js",
+        "/my-iptv-player-pwa/styles.622332a4c02099cb3391.css"
+      ],
+      "patterns": []
+    },
+    {
+      "name": "assets",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "cacheQueryOptions": {
+        "ignoreVary": true
+      },
+      "urls": [
+        "/my-iptv-player-pwa/MaterialIcons-Regular.12a47ed5fd5585f0f422.woff2",
+        "/my-iptv-player-pwa/MaterialIcons-Regular.479700ea91d964d295d7.eot",
+        "/my-iptv-player-pwa/MaterialIcons-Regular.d4f2bf2eff4f11652ef1.ttf",
+        "/my-iptv-player-pwa/MaterialIcons-Regular.f2a0933406f783065152.woff",
+        "/my-iptv-player-pwa/assets/icons/icon-128x128.png",
+        "/my-iptv-player-pwa/assets/icons/icon-144x144.png",
+        "/my-iptv-player-pwa/assets/icons/icon-152x152.png",
+        "/my-iptv-player-pwa/assets/icons/icon-192x192.png",
+        "/my-iptv-player-pwa/assets/icons/icon-384x384.png",
+        "/my-iptv-player-pwa/assets/icons/icon-512x512.png",
+        "/my-iptv-player-pwa/assets/icons/icon-72x72.png",
+        "/my-iptv-player-pwa/assets/icons/icon-96x96.png"
+      ],
+      "patterns": []
+    }
+  ],
+  "dataGroups": [],
+  "hashTable": {
+    "/my-iptv-player-pwa/MaterialIcons-Regular.12a47ed5fd5585f0f422.woff2": "308ee3580a4a34bd230025d460762d53b5344efc",
+    "/my-iptv-player-pwa/MaterialIcons-Regular.479700ea91d964d295d7.eot": "b28698262d8d8766c7c1bede47059ebea19a90a0",
+    "/my-iptv-player-pwa/MaterialIcons-Regular.d4f2bf2eff4f11652ef1.ttf": "8387df2a663e4d99557093b4dd50e4df2bd07860",
+    "/my-iptv-player-pwa/MaterialIcons-Regular.f2a0933406f783065152.woff": "951adc0458f2ead8495da26886b1f1284a716eaa",
+    "/my-iptv-player-pwa/assets/icons/icon-128x128.png": "dae3b6ed49bdaf4327b92531d4b5b4a5d30c7532",
+    "/my-iptv-player-pwa/assets/icons/icon-144x144.png": "b0bd89982e08f9bd2b642928f5391915b74799a7",
+    "/my-iptv-player-pwa/assets/icons/icon-152x152.png": "7479a9477815dfd9668d60f8b3b2fba709b91310",
+    "/my-iptv-player-pwa/assets/icons/icon-192x192.png": "1abd80d431a237a853ce38147d8c63752f10933b",
+    "/my-iptv-player-pwa/assets/icons/icon-384x384.png": "329749cd6393768d3131ed6304c136b1ca05f2fd",
+    "/my-iptv-player-pwa/assets/icons/icon-512x512.png": "559d9c4318b45a1f2b10596bbb4c960fe521dbcc",
+    "/my-iptv-player-pwa/assets/icons/icon-72x72.png": "c457e56089a36952cd67156f9996bc4ce54a5ed9",
+    "/my-iptv-player-pwa/assets/icons/icon-96x96.png": "3914125a4b445bf111c5627875fc190f560daa41",
+    "/my-iptv-player-pwa/background.js": "9b30fbad8da414f7ca3283084e8eebdac8b5ec19",
+    "/my-iptv-player-pwa/favicon.ico": "22f6a4a3bcaafafb0254e0f2fa4ceb89e505e8b2",
+    "/my-iptv-player-pwa/index.html": "d900f0b5f03a56bb6a0151c9cf4a423d9683cdfa",
+    "/my-iptv-player-pwa/main-es2015.d73a0d2cbb4a30b7f434.js": "f954caa82919fe3f54e64f8df6b919cd02a2d9f7",
+    "/my-iptv-player-pwa/main-es5.d73a0d2cbb4a30b7f434.js": "d3f2bbd9b2464e1a420f6f2fba7c68cf41275277",
+    "/my-iptv-player-pwa/manifest.webmanifest": "5c6d120fea2f47715c3739efbfc537a64d496a54",
+    "/my-iptv-player-pwa/polyfills-es2015.a0fa45e0fa52702b64f0.js": "72ad4ccc0a3916ae4598199447cdeadd6d380570",
+    "/my-iptv-player-pwa/polyfills-es5.ad488d10aedb20ee68c9.js": "ff14d90e08622190714660721edab5f43578829a",
+    "/my-iptv-player-pwa/runtime-es2015.409e6590615fb48d139f.js": "a9aafcf49f49145093fc831efd9b8e2f6c71bb9c",
+    "/my-iptv-player-pwa/runtime-es5.409e6590615fb48d139f.js": "a9aafcf49f49145093fc831efd9b8e2f6c71bb9c",
+    "/my-iptv-player-pwa/styles.622332a4c02099cb3391.css": "d59c0088ecb12d437f8205ecbff741a8f0527d75"
+  },
+  "navigationUrls": [
+    {
+      "positive": true,
+      "regex": "^\\/.*$"
+    },
+    {
+      "positive": false,
+      "regex": "^\\/(?:.+\\/)?[^/]*\\.[^/]*$"
+    },
+    {
+      "positive": false,
+      "regex": "^\\/(?:.+\\/)?[^/]*__[^/]*$"
+    },
+    {
+      "positive": false,
+      "regex": "^\\/(?:.+\\/)?[^/]*__[^/]*\\/.*$"
+    }
+  ]
+}
