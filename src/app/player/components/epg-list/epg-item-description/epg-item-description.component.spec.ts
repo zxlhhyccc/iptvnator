@@ -1,32 +1,39 @@
-import { By } from '@angular/platform-browser';
-import { MockPipe, MockModule } from 'ng-mocks';
-import { TranslatePipe } from '@ngx-translate/core';
-import { MatDialogModule, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
-import { EpgItemDescriptionComponent } from './epg-item-description.component';
+import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { By } from '@angular/platform-browser';
+import { TranslateModule } from '@ngx-translate/core';
+import { MockModule } from 'ng-mocks';
 import { EpgProgram } from '../../../models/epg-program.model';
+import { EpgItemDescriptionComponent } from './epg-item-description.component';
 
 describe('EpgItemDescriptionComponent', () => {
     let component: EpgItemDescriptionComponent;
     let fixture: ComponentFixture<EpgItemDescriptionComponent>;
 
-    beforeEach(
-        waitForAsync(() => {
-            TestBed.configureTestingModule({
-                declarations: [
-                    EpgItemDescriptionComponent,
-                    MockPipe(TranslatePipe),
-                ],
-                imports: [MockModule(MatDialogModule)],
-                providers: [{ provide: MAT_DIALOG_DATA, useValue: {} }],
-            }).compileComponents();
-        })
-    );
+    beforeEach(waitForAsync(() => {
+        TestBed.configureTestingModule({
+            imports: [
+                EpgItemDescriptionComponent,
+                MockModule(MatDialogModule),
+                MockModule(TranslateModule),
+            ],
+            providers: [
+                {
+                    provide: MAT_DIALOG_DATA,
+                    useValue: {
+                        title: 'TV Show 1',
+                        desc: 'Highly interesting show about pets',
+                        category: 'Fun',
+                    } as unknown as EpgProgram,
+                },
+            ],
+        }).compileComponents();
+    }));
 
     beforeEach(() => {
         fixture = TestBed.createComponent(EpgItemDescriptionComponent);
         component = fixture.componentInstance;
-        component.epgProgram = {} as EpgProgram;
+        component.epgProgram = TestBed.inject(MAT_DIALOG_DATA);
         fixture.detectChanges();
     });
 
@@ -35,25 +42,26 @@ describe('EpgItemDescriptionComponent', () => {
     });
 
     it('should render epg details in the dialog', () => {
-        component.epgProgram = {
-            title: [{ value: 'TV Show 1', lang: 'ru' }],
-            desc: [{ value: 'Highly interesting show about pets' }],
-            category: [{ value: 'Fun' }],
-        } as EpgProgram;
         fixture.detectChanges();
-        const title = fixture.debugElement.query(By.css('[data-test="title"]'));
-        expect(title.nativeNode.innerHTML).toContain(
-            component.epgProgram.title[0].value
+        const titleElement = fixture.debugElement.query(
+            By.css('[data-test="title"]')
         );
-        const category = fixture.debugElement.query(
+        expect(titleElement.nativeElement.textContent.trim()).toContain(
+            'TV Show 1'
+        );
+
+        const categoryElement = fixture.debugElement.query(
             By.css('[data-test="category"]')
         );
-        expect(category.nativeNode.innerHTML).toContain(
-            component.epgProgram.category[0].value
+        expect(categoryElement.nativeElement.textContent.trim()).toContain(
+            'Fun'
         );
-        const desc = fixture.debugElement.query(By.css('[data-test="desc"]'));
-        expect(desc.nativeNode.innerHTML).toContain(
-            component.epgProgram.desc[0].value
+
+        const descElement = fixture.debugElement.query(
+            By.css('[data-test="desc"]')
+        );
+        expect(descElement.nativeElement.textContent.trim()).toContain(
+            'Highly interesting show about pets'
         );
     });
 });

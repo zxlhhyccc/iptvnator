@@ -1,5 +1,5 @@
-import { ModalWindow } from 'ngx-whats-new/lib/modal-window.interface';
 import { Injectable } from '@angular/core';
+import { ModalWindow } from 'ngx-whats-new/lib/modal-window.interface';
 import { BehaviorSubject } from 'rxjs';
 
 @Injectable({
@@ -111,7 +111,7 @@ export class WhatsNewService {
             },
             {
                 title: 'This and that',
-                html: 'In addition to the already mentioned new features, some bugs have been fixed and the internal dependencies of the application have been updated. Thanks for all the <a href="https://github.com/4gray/iptvnator/issues" target="_blank">ideas</a>, contributions and <a target="_blank" href="https://www.buymeacoffee.com/4gray">first donations.</a>',
+                html: 'In addition to the already mentioned new features, some bugs have been fixed and the internal dependencies of the application have been updated. Thanks for all the <a href="https://github.com/4gray/iptvnator/issues" target="_blank">ideas</a>, contributions and <a target="_blank" href="https://github.com/sponsors/4gray">first donations.</a>',
                 button: {
                     text: 'YAY!',
                     textColor: '#ccc',
@@ -169,6 +169,113 @@ export class WhatsNewService {
                 },
             },
         ],
+        '0.10.0': [
+            {
+                title: "🎉 v0.10.0 - What's new",
+                html: `
+                    <h3>Playlist navigation from the sidebar</h3>
+                    Switching between playlists is now possible directly from the sidebar and without interrupting channel viewing.
+                    
+                    <h3>Global favorites</h3>
+                    Additional playlist has been added, which is generated on the fly and contains favorite channels from all existing playlists.
+
+                    <h3>PWA</h3>
+                    IPTVnator is now available as a <a href="https://iptvnator.vercel.app/" target="_blank">web-application</a>, which means that you can use it directly from the browser. This means that application can be run on smartphones, tablets, set-top boxes or smart tv browsers.
+
+                    <h3>French localization</h3>
+                    The app has been translated into another language and is now available in French. Many thanks to <a href="https://github.com/m-p-3" target="_blank">@m-p-3</a> for the translation!
+                `,
+                button: {
+                    text: 'Close',
+                    textColor: '#ccc',
+                    bgColor: '#111',
+                },
+            },
+        ],
+        '0.11.0': [
+            {
+                imageHeight: 400,
+                imageBgColor: '#333',
+                imageSrc: './assets/updates/0110/multiple-epg-sources.png',
+                title: 'Multiple EPG sources',
+                html: 'In the new version of the application, you can add more than one URL as a source of the EPG program.',
+                button: {
+                    text: 'NEXT',
+                    textColor: '#ccc',
+                    bgColor: '#111',
+                },
+            },
+            {
+                imageHeight: 400,
+                imageBgColor: '#333',
+                imageSrc: './assets/updates/0110/multi-epg-view.png',
+                title: '🎉 Multi-EPG view',
+                html: 'The first version of multi-EPG view was developed, which is familiar to many users from set-top boxes. At this stage the view works in purely informative mode.',
+                button: {
+                    text: 'NEXT',
+                    textColor: '#ccc',
+                    bgColor: '#111',
+                },
+            },
+            {
+                imageHeight: 400,
+                imageBgColor: '#333',
+                imageSrc: './assets/updates/0110/import-playlist-as-text.png',
+                title: 'Import playlist from plain text',
+                html: 'Another playlist import option became available - import m3u(8) as text. Just copy the playlist to the clipboard and paste it into the application without having to save it to disk.',
+                button: {
+                    text: 'NEXT',
+                    textColor: '#ccc',
+                    bgColor: '#111',
+                },
+            },
+            {
+                title: 'This&that',
+                html: `<h2>Improvements in PWA</h2> 
+                A number of visual changes have been made to improve the experience of using the app on mobile devices.
+                <br />
+                <h2>Internalization</h2> The localization of the project has been improved, but help is still needed with the translation into different languages.
+                <br />
+                <h2>Dependencies updates</h2> 
+                The basic libraries used in the application have been updated (angular, electron etc)`,
+                button: {
+                    text: 'CLOSE',
+                    textColor: '#ccc',
+                    bgColor: '#111',
+                },
+            },
+        ],
+        '0.13.0': [
+            {
+                imageHeight: 400,
+                imageBgColor: '#333',
+                imageSrc: './assets/updates/0130/mpv-player.png',
+                title: '🚀 MPV player integration',
+                html: 'Long-awaited mpv player support, which can now be selected from the settings. Before activating the player from the settings page, make sure it is installed on your system. For more details about mvp integration, check the <a target="_blank" href="https://github.com/4gray/iptvnator/wiki/What-is-mpv-video-player-and-how-to-install-it-on-different-operating-systems%3F">wiki page</a>.',
+                button: {
+                    text: 'YAY',
+                    textColor: '#ccc',
+                    bgColor: '#111',
+                },
+            },
+        ],
+        '0.14.0': [
+            {
+                title: '🚀 New in v0.14.0',
+                html: `The main feature of this release is &mdash; Xtream Code IPTV support. The feature is also available in PWA, but works best in electron version of the application and combination with mpv player.<br />
+                
+                <h3>Other updates:</h3>
+                * possibility to specify custom path for mpv player<br/>
+                * fixed an annoying bug that appeared when reopening mpv player<br/>
+                * updated libraries used under the hood<br/>
+                * fixed bug related to user-agent handling`,
+                button: {
+                    text: 'GO!',
+                    textColor: '#ccc',
+                    bgColor: '#111',
+                },
+            },
+        ],
     };
 
     /** Options for the "what is new" modal dialogs */
@@ -195,5 +302,14 @@ export class WhatsNewService {
      */
     getModalsByVersion(version: string): ModalWindow[] {
         return this.modals[version] || [];
+    }
+
+    /**
+     * Returns modals with latest changes
+     */
+    getLatestChanges(): ModalWindow[] {
+        const modalsLength = Object.keys(this.modals).length;
+        const lastVersion = Object.keys(this.modals)[modalsLength - 1];
+        return this.modals[lastVersion];
     }
 }

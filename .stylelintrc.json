@@ -6,9 +6,7 @@
             true,
             {
                 "ignoreTypes": [
-                    "mat-selection-list",
-                    "mat-nav-list",
-                    "mat-list-item"
+                    "/^mat-/"
                 ]
             }
         ],
@@ -24,7 +22,16 @@
                 "ignoreAtRules": ["function", "if", "each", "include", "mixin"]
             }
         ],
-        "value-keyword-case": null
+        "media-feature-name-no-unknown": [
+            true,
+            {
+              "ignoreMediaFeatureNames": ["display-mode"]
+            }
+        ],
+        "value-keyword-case": null,
+        "string-quotes": "single",
+        "value-no-vendor-prefix": null,
+        "property-no-vendor-prefix": null
     },
     "plugins": ["stylelint-scss"],
     "syntax": "scss"

@@ -1,9 +1,13 @@
-import { Channel } from './../../../state/channel.model';
+import { NgStyle } from '@angular/common';
 import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import moment from 'moment';
+import { Channel } from '../../../../../shared/channel.interface';
+import { MomentDatePipe } from '../../../shared/pipes/moment-date.pipe';
 import { EpgProgram } from '../../models/epg-program.model';
-import * as moment from 'moment';
 
 @Component({
+    standalone: true,
+    imports: [MomentDatePipe, NgStyle],
     selector: 'app-info-overlay',
     templateUrl: './info-overlay.component.html',
     styleUrls: ['./info-overlay.component.scss'],
@@ -38,18 +42,14 @@ export class InfoOverlayComponent implements OnChanges {
      * @param changes component input changes
      */
     ngOnChanges(changes: SimpleChanges): void {
-        if (changes.channel && !changes.channel.firstChange) {
+        if (changes.channel) {
             clearTimeout(this.currentTimeout);
             this.isVisible = true;
             this.currentTimeout = setTimeout(() => {
                 this.isVisible = false;
             }, 4000);
         }
-        if (
-            changes.epgProgram &&
-            changes.epgProgram.currentValue &&
-            !changes.epgProgram.firstChange
-        ) {
+        if (changes.epgProgram && changes.epgProgram.currentValue) {
             const { stop, start } = changes.epgProgram.currentValue;
             this.setProgramDuration(start, stop);
         }

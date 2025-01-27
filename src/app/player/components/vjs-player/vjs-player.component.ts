@@ -2,16 +2,17 @@ import {
     Component,
     ElementRef,
     Input,
+    OnChanges,
     OnDestroy,
     OnInit,
+    SimpleChanges,
     ViewChild,
     ViewEncapsulation,
-    SimpleChanges,
 } from '@angular/core';
-import videoJs from 'video.js';
-import 'videojs-hls-quality-selector';
-import 'videojs-contrib-quality-levels';
 import '@yangkghjh/videojs-aspect-ratio-panel';
+import videoJs from 'video.js';
+import 'videojs-contrib-quality-levels';
+import 'videojs-hls-quality-selector';
 
 /**
  * This component contains the implementation of video player that is based on video.js library
@@ -21,14 +22,16 @@ import '@yangkghjh/videojs-aspect-ratio-panel';
     templateUrl: './vjs-player.component.html',
     styleUrls: ['./vjs-player.component.scss'],
     encapsulation: ViewEncapsulation.None,
+    standalone: true,
 })
-export class VjsPlayerComponent implements OnInit, OnDestroy {
+export class VjsPlayerComponent implements OnInit, OnChanges, OnDestroy {
     /** DOM-element reference */
     @ViewChild('target', { static: true }) target: ElementRef<Element>;
     /** Options of VideoJs player */
     @Input() options: videoJs.PlayerOptions;
     /** VideoJs object */
     player: videoJs.Player;
+    @Input() volume = 1;
 
     /**
      * Instantiate Video.js on component init
@@ -40,8 +43,17 @@ export class VjsPlayerComponent implements OnInit, OnDestroy {
                 ...this.options,
                 autoplay: true,
             },
-            function onPlayerReady() {
-                this.volume(100);
+            () => {
+                console.log(
+                    'Setting VideoJS player initial volume to:',
+                    this.volume
+                );
+                this.player.volume(this.volume);
+
+                this.player.on('volumechange', () => {
+                    const currentVolume = this.player.volume();
+                    localStorage.setItem('volume', currentVolume.toString());
+                });
             }
         );
         this.player.hlsQualitySelector({
@@ -57,6 +69,13 @@ export class VjsPlayerComponent implements OnInit, OnDestroy {
     ngOnChanges(changes: SimpleChanges): void {
         if (changes.options.previousValue) {
             this.player.src(changes.options.currentValue.sources[0]);
+        }
+        if (changes.volume?.currentValue !== undefined && this.player) {
+            console.log(
+                'Setting VideoJS player volume to:',
+                changes.volume.currentValue
+            );
+            this.player.volume(changes.volume.currentValue);
         }
     }
 

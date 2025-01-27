@@ -2,20 +2,27 @@
 
 # compiled output
 /dist
+/build
 /tmp
 /out-tsc
 /app-builds
 /release
+/e2e/tracing
+/e2e/screenshots
+/test-results
 api.js
 epg-worker.js
-ipc-commands.js
 main.js
 menu.js
-playlist.interface.js
 src/**/*.js
 !src/karma.conf.js
 *.js.map
 data.db
+preload.js
+shared/*.js
+playwright-report
+.nx
+server.js
 
 # dependencies
 /node_modules
@@ -45,11 +52,13 @@ npm-debug.log
 testem.log
 /typings
 package-lock.json
+.angular/*
 
 # e2e
 /e2e/*.js
 !/e2e/protractor.conf.js
 /e2e/*.map
+/e2e/db
 
 # System Files
 .DS_Store

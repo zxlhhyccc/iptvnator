@@ -1,16 +1,16 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import { MatTooltipModule } from '@angular/material/tooltip';
+import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { TranslatePipe } from '@ngx-translate/core';
 import { MatListModule } from '@angular/material/list';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { TranslateModule } from '@ngx-translate/core';
+import * as moment from 'moment';
+import { MockModule, MockPipe } from 'ng-mocks';
 import { MomentDatePipe } from './../../../../shared/pipes/moment-date.pipe';
 import { EpgProgram } from './../../../models/epg-program.model';
-import { MockModule, MockPipe } from 'ng-mocks';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
-import { EpgListItemComponent } from './epg-list-item.component';
 import { EpgItemDescriptionComponent } from './../epg-item-description/epg-item-description.component';
-import * as moment from 'moment';
+import { EpgListItemComponent } from './epg-list-item.component';
 
 const EPG_PROGRAM_ITEM = {
     start: moment(Date.now()).format('YYYYMMDD'),
@@ -20,8 +20,7 @@ const EPG_PROGRAM_ITEM = {
     desc: [
         {
             lang: 'en',
-            value:
-                "Jordan's Queen Rania has made job creation a priority to help curb the staggering unemployment rates among youths in the Middle East.",
+            value: "Jordan's Queen Rania has made job creation a priority to help curb the staggering unemployment rates among youths in the Middle East.",
         },
     ],
     date: ['20080711'],
@@ -62,23 +61,18 @@ describe('EpgListItemComponent', () => {
     let fixture: ComponentFixture<EpgListItemComponent>;
     let dialog: MatDialog;
 
-    beforeEach(
-        waitForAsync(() => {
-            TestBed.configureTestingModule({
-                declarations: [
-                    EpgListItemComponent,
-                    MockPipe(MomentDatePipe),
-                    MockPipe(TranslatePipe),
-                ],
-                imports: [
-                    MockModule(MatDialogModule),
-                    MockModule(MatListModule),
-                    MockModule(MatIconModule),
-                    MockModule(MatTooltipModule),
-                ],
-            }).compileComponents();
-        })
-    );
+    beforeEach(waitForAsync(() => {
+        TestBed.configureTestingModule({
+            declarations: [EpgListItemComponent, MockPipe(MomentDatePipe)],
+            imports: [
+                MockModule(MatDialogModule),
+                MockModule(MatListModule),
+                MockModule(MatIconModule),
+                MockModule(MatTooltipModule),
+                MockModule(TranslateModule),
+            ],
+        }).compileComponents();
+    }));
 
     beforeEach(() => {
         fixture = TestBed.createComponent(EpgListItemComponent);
@@ -93,7 +87,7 @@ describe('EpgListItemComponent', () => {
     });
 
     it('should trigger the function to open the details dialog', () => {
-        spyOn(dialog, 'open');
+        jest.spyOn(dialog, 'open');
         component.showDescription({} as EpgProgram);
         expect(dialog.open).toHaveBeenCalledTimes(1);
         expect(dialog.open).toHaveBeenCalledWith(EpgItemDescriptionComponent, {

@@ -1,30 +1,52 @@
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { StorageMap } from '@ngx-pwa/local-storage';
-/* eslint-disable @typescript-eslint/unbound-method */
-import { ElectronService } from './../services/electron.service';
-import { ElectronServiceStub } from '../services/electron.service.stub';
-import { MatSelectModule } from '@angular/material/select';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatListModule } from '@angular/material/list';
-import { MatCardModule } from '@angular/material/card';
-import { HeaderComponent } from './../shared/components/header/header.component';
-import { TranslateServiceStub } from './../../testing/translate.stub';
-import { RouterTestingModule } from '@angular/router/testing';
-import { SettingsComponent } from './settings.component';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
-import { MockModule, MockPipe, MockComponent } from 'ng-mocks';
-import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
+/* eslint-disable @typescript-eslint/await-thenable */
 import { HttpClientTestingModule } from '@angular/common/http/testing';
-import { EPG_FETCH } from '../../../shared/ipc-commands';
+import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
+import {
+    FormsModule,
+    ReactiveFormsModule,
+    UntypedFormBuilder,
+} from '@angular/forms';
+import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatListModule } from '@angular/material/list';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
-import { of } from 'rxjs';
-import { VideoPlayer } from './settings.interface';
+import { RouterTestingModule } from '@angular/router/testing';
+import { provideMockStore } from '@ngrx/store/testing';
+import {
+    TranslateModule,
+    TranslatePipe,
+    TranslateService,
+} from '@ngx-translate/core';
+import {
+    MockComponent,
+    MockModule,
+    MockPipe,
+    MockProvider,
+    MockProviders,
+} from 'ng-mocks';
+import { DataService } from '../services/data.service';
+import { HeaderComponent } from '../shared/components';
 import { Language } from './language.enum';
+import { SettingsComponent } from './settings.component';
+import { VideoPlayer } from './settings.interface';
 import { Theme } from './theme.enum';
+
+import { signal } from '@angular/core';
+import { NgxIndexedDBService } from 'ngx-indexed-db';
+import { of } from 'rxjs';
+import { SETTINGS_UPDATE } from '../../../shared/ipc-commands';
+import { DialogService } from '../services/dialog.service';
+import { ElectronServiceStub } from '../services/electron.service.stub';
+import { EpgService } from '../services/epg.service';
+import { PlaylistsService } from '../services/playlists.service';
+import { SettingsStore } from '../services/settings-store.service';
+import { SettingsService } from '../services/settings.service';
 
 class MatSnackBarStub {
     open(): void {}
@@ -38,65 +60,93 @@ export class MockRouter {
 
 const DEFAULT_SETTINGS = {
     player: VideoPlayer.VideoJs,
-    epgUrl: '',
     language: Language.ENGLISH,
     showCaptions: false,
     theme: Theme.LightTheme,
+    mpvPlayerPath: '',
+    vlcPlayerPath: '',
+    remoteControl: false,
+    remoteControlPort: 3000,
 };
+
+class MockSettingsStore {
+    private _settings = signal(DEFAULT_SETTINGS);
+
+    getSettings = () => this._settings;
+
+    loadSettings = jest.fn().mockResolvedValue(undefined);
+
+    updateSettings = jest.fn().mockResolvedValue(undefined);
+
+    // Helper method for tests to modify settings
+    _setSettings(newSettings: any) {
+        this._settings.set(newSettings);
+    }
+}
+
+class MockSettingsService {
+    getAppVersion = jest.fn().mockReturnValue(of('1.0.0'));
+    changeTheme = jest.fn();
+}
 
 describe('SettingsComponent', () => {
     let component: SettingsComponent;
     let fixture: ComponentFixture<SettingsComponent>;
-    let electronService: ElectronService;
+    let electronService: DataService;
     let router: Router;
-    let storage: StorageMap;
+    let settingsStore: SettingsStore;
     let translate: TranslateService;
+    let epgService: EpgService;
 
-    beforeEach(
-        waitForAsync(() => {
-            TestBed.configureTestingModule({
-                declarations: [
-                    SettingsComponent,
-                    MockComponent(HeaderComponent),
-                    MockPipe(TranslatePipe),
-                ],
-                providers: [
-                    FormBuilder,
-                    { provide: MatSnackBar, useClass: MatSnackBarStub },
-                    {
-                        provide: TranslateService,
-                        useClass: TranslateServiceStub,
-                    },
-                    { provide: ElectronService, useClass: ElectronServiceStub },
-                    {
-                        provide: Router,
-                        useClass: MockRouter,
-                    },
-                    StorageMap,
-                ],
-                imports: [
-                    HttpClientTestingModule,
-                    MockModule(FormsModule),
-                    MockModule(MatSelectModule),
-                    MockModule(MatIconModule),
-                    MockModule(MatTooltipModule),
-                    MockModule(ReactiveFormsModule),
-                    MockModule(RouterTestingModule),
-                    MockModule(MatCardModule),
-                    MockModule(MatListModule),
-                    MockModule(MatFormFieldModule),
-                    MockModule(MatCheckboxModule),
-                ],
-            }).compileComponents();
-        })
-    );
+    beforeEach(waitForAsync(() => {
+        TestBed.configureTestingModule({
+            declarations: [
+                SettingsComponent,
+                MockComponent(HeaderComponent),
+                MockPipe(TranslatePipe),
+            ],
+            providers: [
+                UntypedFormBuilder,
+                MockProvider(TranslateService),
+                { provide: SettingsStore, useClass: MockSettingsStore },
+                MockProvider(EpgService),
+                MockProvider(DialogService),
+                { provide: SettingsService, useClass: MockSettingsService },
+                { provide: MatSnackBar, useClass: MatSnackBarStub },
+                { provide: DataService, useClass: ElectronServiceStub },
+                {
+                    provide: Router,
+                    useClass: MockRouter,
+                },
+                provideMockStore(),
+                MockProviders(NgxIndexedDBService, PlaylistsService),
+            ],
+            imports: [
+                HttpClientTestingModule,
+                MockModule(FormsModule),
+                MockModule(MatSelectModule),
+                MockModule(MatIconModule),
+                MockModule(MatTooltipModule),
+                MockModule(ReactiveFormsModule),
+                MockModule(RouterTestingModule),
+                MockModule(MatCardModule),
+                MockModule(MatListModule),
+                MockModule(MatFormFieldModule),
+                MockModule(MatCheckboxModule),
+                MockModule(MatDividerModule),
+                MockModule(TranslateModule),
+            ],
+        }).compileComponents();
+    }));
 
     beforeEach(() => {
         fixture = TestBed.createComponent(SettingsComponent);
-        electronService = TestBed.inject(ElectronService);
-        storage = TestBed.inject(StorageMap);
+        electronService = TestBed.inject(DataService);
+        settingsStore = TestBed.inject(SettingsStore);
         router = TestBed.inject(Router);
         translate = TestBed.inject(TranslateService);
+        epgService = TestBed.inject(EpgService);
+
         component = fixture.componentInstance;
         fixture.detectChanges();
     });
@@ -106,33 +156,33 @@ describe('SettingsComponent', () => {
     });
 
     describe('Get and set settings on component init', () => {
-        const settings = { player: 'test', showCaptions: true };
-        let spyOnStorageGet;
+        const settings = {
+            player: VideoPlayer.VideoJs,
+            showCaptions: true,
+            mpvPlayerPath: '/test/mpv',
+            vlcPlayerPath: '/test/vlc',
+        };
 
-        beforeEach(() => {
-            spyOnStorageGet = spyOn(storage, 'get');
-        });
-
-        it('should init default settings if previous config was not saved', () => {
-            spyOnStorageGet.and.returnValue(of(null));
-            spyOn(component.settingsForm, 'setValue');
-            component.ngOnInit();
-            expect(storage.get).toHaveBeenCalled();
-            expect(component.settingsForm.setValue).toHaveBeenCalledTimes(0);
+        it('should init default settings if previous config was not saved', async () => {
+            await component.ngOnInit();
+            expect(settingsStore.loadSettings).toHaveBeenCalled();
             expect(component.settingsForm.value).toEqual(DEFAULT_SETTINGS);
         });
 
-        it('should call set value function if custom config exists', () => {
-            spyOnStorageGet.and.returnValue(of(settings));
-            spyOn(component.settingsForm, 'setValue');
-            component.ngOnInit();
-            expect(component.settingsForm.setValue).toHaveBeenCalled();
-        });
+        it('should get and apply custom settings', async () => {
+            const mockStore = settingsStore as unknown as MockSettingsStore;
+            mockStore._setSettings({
+                ...DEFAULT_SETTINGS,
+                ...settings,
+            });
 
-        it('should get and apply custom settings', () => {
-            spyOnStorageGet.and.returnValue(of(settings));
             component.ngOnInit();
-            expect(storage.get).toHaveBeenCalled();
+
+            // Force change detection
+            fixture.detectChanges();
+            await fixture.whenStable();
+
+            expect(settingsStore.loadSettings).toHaveBeenCalled();
             expect(component.settingsForm.value).toEqual({
                 ...DEFAULT_SETTINGS,
                 ...settings,
@@ -144,8 +194,26 @@ describe('SettingsComponent', () => {
         const latestVersion = '1.0.0';
         const currentVersion = '0.1.0';
 
+        beforeEach(() => {
+            const settingsService = TestBed.inject(SettingsService);
+            (settingsService.getAppVersion as jest.Mock).mockReturnValue(
+                of(latestVersion)
+            );
+
+            // Add translation mock
+            jest.spyOn(translate, 'instant').mockImplementation((key) => {
+                if (key === 'SETTINGS.NEW_VERSION_AVAILABLE') {
+                    return 'New version available';
+                }
+                if (key === 'SETTINGS.LATEST_VERSION') {
+                    return 'Latest version installed';
+                }
+                return key;
+            });
+        });
+
         it('should return true if version is outdated', () => {
-            spyOn(electronService, 'getAppVersion').and.returnValue(
+            jest.spyOn(electronService, 'getAppVersion').mockReturnValue(
                 currentVersion
             );
             const isOutdated =
@@ -154,33 +222,47 @@ describe('SettingsComponent', () => {
         });
 
         it('should update notification message if version is outdated', () => {
-            spyOn(translate, 'instant');
-            spyOn(electronService, 'getAppVersion').and.returnValue(
+            jest.spyOn(translate, 'instant');
+            jest.spyOn(electronService, 'getAppVersion').mockReturnValue(
                 currentVersion
             );
-            component.showVersionInformation(currentVersion);
+            component.showVersionInformation(latestVersion);
             fixture.detectChanges();
-            expect(translate.instant).toHaveBeenCalled();
+            expect(translate.instant).toHaveBeenCalledWith(
+                'SETTINGS.NEW_VERSION_AVAILABLE'
+            );
+            expect(component.updateMessage).toBe(
+                'New version available: 1.0.0'
+            );
         });
     });
 
-    it('should send epg fetch command', () => {
-        spyOn(electronService, 'sendIpcEvent');
-        component.fetchEpg();
-        expect(electronService.sendIpcEvent).toHaveBeenCalledWith(EPG_FETCH, {
-            url: '',
-        });
+    it('should send epg refresh command', () => {
+        jest.spyOn(epgService, 'fetchEpg');
+        const url = 'http://epg-url-here/data.xml';
+        component.refreshEpg(url);
+        expect(epgService.fetchEpg).toHaveBeenCalledWith([url]);
     });
 
     it('should navigate back to home page', () => {
-        spyOn(router, 'navigateByUrl');
+        jest.spyOn(router, 'navigateByUrl');
         component.backToHome();
-        expect(router.navigateByUrl).toHaveBeenCalledTimes(1);
+        expect(router.navigateByUrl).toHaveBeenCalledWith('/');
     });
 
-    it('should save settings on submit', () => {
-        spyOn(storage, 'set').and.returnValue(of([]));
-        component.onSubmit();
-        expect(storage.set).toHaveBeenCalled();
+    it('should save settings on submit', async () => {
+        const mockStore = settingsStore as unknown as MockSettingsStore;
+        mockStore.updateSettings.mockResolvedValue(undefined);
+
+        jest.spyOn(electronService, 'sendIpcEvent');
+        await component.onSubmit();
+
+        expect(mockStore.updateSettings).toHaveBeenCalledWith(
+            component.settingsForm.value
+        );
+        expect(electronService.sendIpcEvent).toHaveBeenCalledWith(
+            SETTINGS_UPDATE,
+            component.settingsForm.value
+        );
     });
 });

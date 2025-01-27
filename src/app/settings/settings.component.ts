@@ -1,34 +1,98 @@
-import { TranslateService } from '@ngx-translate/core';
-import { Component, OnInit } from '@angular/core';
-import { FormGroup, FormBuilder } from '@angular/forms';
-import { StorageMap } from '@ngx-pwa/local-storage';
-import { Router } from '@angular/router';
+/* eslint-disable @typescript-eslint/no-base-to-string */
+import { CommonModule } from '@angular/common';
+import {
+    Component,
+    inject,
+    Inject,
+    Input,
+    OnInit,
+    Optional,
+} from '@angular/core';
+import {
+    FormArray,
+    FormBuilder,
+    FormControl,
+    FormsModule,
+    ReactiveFormsModule,
+    Validators,
+} from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import {
+    MAT_DIALOG_DATA,
+    MatDialog,
+    MatDialogModule,
+} from '@angular/material/dialog';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Observable } from 'rxjs';
-import { STORE_KEY } from '../shared/enums/store-keys.enum';
-import { Settings, VideoPlayer } from './settings.interface';
-import { HttpClient } from '@angular/common/http';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { Router } from '@angular/router';
+import { Store } from '@ngrx/store';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { take } from 'rxjs';
 import * as semver from 'semver';
-import { ElectronService } from '../services/electron.service';
-import { ChannelQuery } from '../state';
-import { EPG_FETCH } from '../../../shared/ipc-commands';
-import { Language } from './language.enum';
-import { Theme } from './theme.enum';
+import {
+    SET_MPV_PLAYER_PATH,
+    SET_VLC_PLAYER_PATH,
+    SETTINGS_UPDATE,
+} from '../../../shared/ipc-commands';
+import { Playlist } from '../../../shared/playlist.interface';
+import { DataService } from '../services/data.service';
+import { DialogService } from '../services/dialog.service';
+import { EpgService } from '../services/epg.service';
+import { PlaylistsService } from '../services/playlists.service';
+import { SettingsStore } from '../services/settings-store.service';
+import { HeaderComponent } from '../shared/components/header/header.component';
+import * as PlaylistActions from '../state/actions';
+import { selectIsEpgAvailable } from '../state/selectors';
 import { SettingsService } from './../services/settings.service';
-import { catchError } from 'rxjs/operators';
-
-/** Url of the package.json file in the app repository, required to get the version of the released app */
-const PACKAGE_JSON_URL =
-    'https://raw.githubusercontent.com/4gray/iptvnator/master/package.json';
+import { Language } from './language.enum';
+import { VideoPlayer } from './settings.interface';
+import { Theme } from './theme.enum';
 
 @Component({
-    selector: 'app-settings',
     templateUrl: './settings.component.html',
     styleUrls: ['./settings.component.scss'],
+    standalone: true,
+    imports: [
+        CommonModule,
+        FormsModule,
+        HeaderComponent,
+        MatButtonModule,
+        MatCheckboxModule,
+        MatDividerModule,
+        MatIconModule,
+        MatInputModule,
+        MatSelectModule,
+        MatTooltipModule,
+        ReactiveFormsModule,
+        TranslateModule,
+        MatDialogModule,
+    ],
 })
 export class SettingsComponent implements OnInit {
+    @Input() isDialog = false;
     /** List with available languages as enum */
     languageEnum = Language;
+
+    /** Flag that indicates whether the app runs in electron environment */
+    isTauri = this.dataService.getAppEnvironment() === 'tauri';
+
+    isPwa = this.dataService.getAppEnvironment() === 'pwa';
+
+    osPlayers = [
+        {
+            id: VideoPlayer.MPV,
+            label: 'MPV Player',
+        },
+        {
+            id: VideoPlayer.VLC,
+            label: 'VLC',
+        },
+    ];
 
     /** Player options */
     players = [
@@ -40,10 +104,16 @@ export class SettingsComponent implements OnInit {
             id: VideoPlayer.VideoJs,
             label: 'VideoJs Player',
         },
+        /* {
+            id: VideoPlayer.DPlayer,
+            label: 'DPlayer',
+        },
+        {
+            id: VideoPlayer.ArtPlayer,
+            label: 'ArtPlayer',
+        }, */
+        ...(this.isTauri ? this.osPlayers : []),
     ];
-
-    /** Settings form object */
-    settingsForm: FormGroup;
 
     /** Current version of the app */
     version: string;
@@ -52,46 +122,48 @@ export class SettingsComponent implements OnInit {
     updateMessage: string;
 
     /** EPG availability flag */
-    epgAvailable$: Observable<boolean> = this.channelQuery.select(
-        (store) => store.epgAvailable
-    );
+    epgAvailable$ = this.store.select(selectIsEpgAvailable);
 
     /** All available visual themes */
     themeEnum = Theme;
 
+    /** Settings form object */
+    settingsForm = this.formBuilder.group({
+        player: [VideoPlayer.VideoJs],
+        ...(this.isTauri ? { epgUrl: new FormArray([]) } : {}),
+        language: Language.ENGLISH,
+        showCaptions: false,
+        theme: Theme.LightTheme,
+        mpvPlayerPath: '',
+        vlcPlayerPath: '',
+        remoteControl: false,
+        remoteControlPort: 3000,
+    });
+
+    /** Form array with epg sources */
+    epgUrl = this.settingsForm.get('epgUrl') as FormArray;
+
+    private settingsStore = inject(SettingsStore);
+
     /**
      * Creates an instance of SettingsComponent and injects
      * required dependencies into the component
-     * @param channelQuery
-     * @param electronService
-     * @param formBuilder
-     * @param http
-     * @param router
-     * @param settingsService
-     * @param snackBar
-     * @param storage
-     * @param translate
      */
     constructor(
-        private channelQuery: ChannelQuery,
-        private electronService: ElectronService,
+        private dialogService: DialogService,
+        public dataService: DataService,
+        private epgService: EpgService,
         private formBuilder: FormBuilder,
-        private http: HttpClient,
+        private playlistsService: PlaylistsService,
         private router: Router,
         private settingsService: SettingsService,
         private snackBar: MatSnackBar,
-        private storage: StorageMap,
-        private translate: TranslateService
+        private store: Store,
+        private translate: TranslateService,
+        private matDialog: MatDialog,
+        @Optional() @Inject(MAT_DIALOG_DATA) data?: { isDialog: boolean }
     ) {
-        this.settingsForm = this.formBuilder.group({
-            player: [VideoPlayer.VideoJs],
-            epgUrl: '',
-            language: Language.ENGLISH,
-            showCaptions: false,
-            theme: Theme.LightTheme,
-        });
-
-        this.checkAppVersion();
+        this.isDialog = data?.isDialog ?? false;
     }
 
     /**
@@ -99,27 +171,39 @@ export class SettingsComponent implements OnInit {
      * storage (indexed db)
      */
     ngOnInit(): void {
-        this.settingsService
-            .getValueFromLocalStorage(STORE_KEY.Settings)
-            .subscribe((settings: Settings) => {
-                if (settings) {
-                    this.settingsForm.setValue({
-                        player: settings.player
-                            ? settings.player
-                            : VideoPlayer.VideoJs,
-                        epgUrl: settings.epgUrl ? settings.epgUrl : '',
-                        language: settings.language
-                            ? settings.language
-                            : Language.ENGLISH,
-                        showCaptions: settings.showCaptions
-                            ? settings.showCaptions
-                            : false,
-                        theme: settings.theme
-                            ? settings.theme
-                            : Theme.LightTheme,
-                    });
-                }
-            });
+        this.setSettings();
+        this.checkAppVersion();
+    }
+
+    /**
+     * Sets saved settings from the indexed db store
+     */
+    setSettings() {
+        const currentSettings = this.settingsStore.getSettings();
+        this.settingsForm.patchValue(currentSettings);
+
+        if (this.isTauri && currentSettings.epgUrl) {
+            this.setEpgUrls(currentSettings.epgUrl);
+        }
+    }
+
+    /**
+     * Sets the epg urls to the form array
+     * @param epgUrls urls of the EPG sources
+     */
+    setEpgUrls(epgUrls: string[] | string): void {
+        const URL_REGEX = /^(http|https|file):\/\/[^ "]+$/;
+
+        const urls = Array.isArray(epgUrls) ? epgUrls : [epgUrls];
+        const filteredUrls = urls
+            .map((url) => url.trim())
+            .filter((url) => url !== '');
+
+        filteredUrls.forEach((url) => {
+            this.epgUrl.push(
+                new FormControl(url, [Validators.pattern(URL_REGEX)])
+            );
+        });
     }
 
     /**
@@ -128,17 +212,10 @@ export class SettingsComponent implements OnInit {
      * settings UI
      */
     checkAppVersion(): void {
-        this.http
-            .get(PACKAGE_JSON_URL)
-            .pipe(
-                catchError((err) => {
-                    console.error(err);
-                    throw new Error(err);
-                })
-            )
-            .subscribe((response: { version: string }) => {
-                this.showVersionInformation(response.version);
-            });
+        this.settingsService
+            .getAppVersion()
+            .pipe(take(1))
+            .subscribe((version) => this.showVersionInformation(version));
     }
 
     /**
@@ -169,7 +246,7 @@ export class SettingsComponent implements OnInit {
      * @returns returns true if an update is available
      */
     isCurrentVersionOutdated(latestVersion: string): boolean {
-        this.version = this.electronService.getAppVersion();
+        this.version = this.dataService.getAppVersion();
         return semver.lt(this.version, latestVersion);
     }
 
@@ -178,43 +255,175 @@ export class SettingsComponent implements OnInit {
      * the indexed db store
      */
     onSubmit(): void {
-        this.storage
-            .set(STORE_KEY.Settings, this.settingsForm.value)
-            .subscribe(() => {
-                this.settingsForm.markAsPristine();
-                // check whether the epg url was changed or not
-                if (this.settingsForm.value.epgUrl) {
-                    this.fetchEpg();
+        this.settingsStore.updateSettings(this.settingsForm.value).then(() => {
+            this.applyChangedSettings();
+            this.dataService.sendIpcEvent(
+                SETTINGS_UPDATE,
+                this.settingsForm.value
+            );
+
+            this.dataService.sendIpcEvent(
+                SET_MPV_PLAYER_PATH,
+                this.settingsForm.value.mpvPlayerPath
+            );
+
+            this.dataService.sendIpcEvent(
+                SET_VLC_PLAYER_PATH,
+                this.settingsForm.value.mpvPlayerPath
+            );
+        });
+        if (this.isDialog) {
+            this.matDialog.closeAll();
+        }
+    }
+
+    /**
+     * Applies the changed settings to the app
+     */
+    applyChangedSettings(): void {
+        this.settingsForm.markAsPristine();
+        if (this.isTauri) {
+            let epgUrls = this.settingsForm.value.epgUrl;
+            if (epgUrls) {
+                if (!Array.isArray(epgUrls)) {
+                    epgUrls = [epgUrls];
                 }
-                this.translate.use(this.settingsForm.value.language);
-                this.settingsService.changeTheme(this.settingsForm.value.theme);
-                this.snackBar.open(
-                    this.translate.instant('SETTINGS.SETTINGS_SAVED'),
-                    null,
-                    {
-                        duration: 2000,
-                    }
-                );
-            });
+                epgUrls = epgUrls.filter((url) => url !== '');
+                if (epgUrls.length > 0) {
+                    // Fetch all EPG URLs at once
+                    this.epgService.fetchEpg(epgUrls);
+                }
+            }
+        }
+        this.translate.use(this.settingsForm.value.language);
+        this.settingsService.changeTheme(this.settingsForm.value.theme);
+        this.snackBar.open(
+            this.translate.instant('SETTINGS.SETTINGS_SAVED'),
+            null,
+            {
+                duration: 2000,
+                horizontalPosition: 'start',
+            }
+        );
     }
 
     /**
      * Navigates back to the applications homepage
      */
     backToHome(): void {
-        this.router.navigateByUrl('/', { skipLocationChange: true });
+        if (this.isDialog) {
+            this.matDialog.closeAll();
+        } else {
+            this.router.navigateByUrl('/');
+        }
     }
 
     /**
      * Fetches and updates EPG from the given URL
+     * @param url epg source url
      */
-    fetchEpg(): void {
-        this.electronService.sendIpcEvent(EPG_FETCH, {
-            url: this.settingsForm.value.epgUrl,
+    refreshEpg(url: string): void {
+        this.epgService.fetchEpg([url]);
+    }
+
+    /**
+     * Initializes new entry in form array for EPG URL
+     */
+    addEpgSource(): void {
+        this.epgUrl.insert(
+            this.epgUrl.length,
+            new FormControl('', {
+                validators: [
+                    Validators.pattern(/^(http|https|file):\/\/[^ "]+$/),
+                ],
+            })
+        );
+    }
+
+    /**
+     * Removes entry from form array for EPG URL
+     * @param index index of the item to remove
+     */
+    removeEpgSource(index: number): void {
+        this.epgUrl.removeAt(index);
+        this.settingsForm.markAsDirty();
+    }
+
+    exportData() {
+        this.playlistsService
+            .getAllData()
+            .pipe(take(1))
+            .subscribe((data) => {
+                const blob = new Blob([JSON.stringify(data)], {
+                    type: 'text/plain',
+                });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'playlists.json';
+                link.click();
+                window.URL.revokeObjectURL(url);
+            });
+    }
+
+    importData() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'application/json';
+
+        input.addEventListener('change', (event: Event) => {
+            const target = event.target as HTMLInputElement;
+            const file = target.files?.[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const contents = reader.result;
+
+                    try {
+                        const parsedPlaylists: Playlist[] = JSON.parse(
+                            contents.toString()
+                        );
+
+                        if (!Array.isArray(parsedPlaylists)) {
+                            this.snackBar.open(
+                                this.translate.instant('SETTINGS.IMPORT_ERROR'),
+                                null,
+                                {
+                                    duration: 2000,
+                                }
+                            );
+                        } else {
+                            this.store.dispatch(
+                                PlaylistActions.addManyPlaylists({
+                                    playlists: parsedPlaylists,
+                                })
+                            );
+                        }
+                    } catch (error) {
+                        this.snackBar.open(
+                            this.translate.instant('SETTINGS.IMPORT_ERROR'),
+                            null,
+                            {
+                                duration: 2000,
+                            }
+                        );
+                        console.error(error);
+                    }
+                };
+                reader.readAsText(file);
+            }
         });
-        this.snackBar.open(this.translate.instant('EPG.FETCH_EPG'), 'Close', {
-            verticalPosition: 'bottom',
-            horizontalPosition: 'right',
+
+        input.click();
+    }
+
+    removeAll() {
+        this.dialogService.openConfirmDialog({
+            title: this.translate.instant('SETTINGS.REMOVE_DIALOG.TITLE'),
+            message: this.translate.instant('SETTINGS.REMOVE_DIALOG.MESSAGE'),
+            onConfirm: (): void =>
+                this.store.dispatch(PlaylistActions.removeAllPlaylists()),
         });
     }
 }

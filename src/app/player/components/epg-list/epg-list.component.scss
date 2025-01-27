@@ -7,15 +7,45 @@
     left: 0;
     bottom: 0;
     height: 100%;
+    overflow-x: hidden;
 }
 
 .active {
     border-bottom: 1px dashed #666;
 }
 
-#channel-info {
+#channel-header {
+    flex-direction: column;
+    box-sizing: border-box;
+    display: flex;
+
+    .channel-info {
+        flex-direction: row;
+        box-sizing: border-box;
+        display: flex;
+        padding: 10px;
+    }
+
     .channel-icon {
         overflow: hidden;
+        margin-right: 10px;
+        place-content: center;
+        align-items: center;
+        flex-direction: row;
+        box-sizing: border-box;
+        display: flex;
+        flex: 1 1 60px;
+        max-width: 60px;
+        min-width: 60px;
+    }
+
+    .channel-details {
+        flex: 1 1 100%;
+        box-sizing: border-box;
+        max-width: 100%;
+        align-self: center;
+        display: flex;
+        flex-direction: column;
     }
 
     .channel-name {
@@ -32,11 +62,24 @@
     }
 }
 
+#program-list {
+    flex: 1 1 1e-9px;
+    box-sizing: border-box;
+}
+
+.epg-not-available {
+    padding: 0 10px;
+}
+
 mat-selection-list {
     overflow: auto;
 }
 
 #date-navigator {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
     .selected-date {
         font-size: 0.9em;
     }

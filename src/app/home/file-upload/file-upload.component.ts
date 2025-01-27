@@ -1,90 +1,82 @@
-import { Component, EventEmitter, Output } from '@angular/core';
-import {
-    UploaderOptions,
-    UploadFile,
-    UploadOutput,
-    UploadInput,
-} from 'ngx-uploader';
+import { Component, EventEmitter, inject, Output } from '@angular/core';
+import { MatIconModule } from '@angular/material/icon';
+import { Store } from '@ngrx/store';
+import { TranslateModule } from '@ngx-translate/core';
+import { isTauri } from '@tauri-apps/api/core';
+import { open } from '@tauri-apps/plugin-dialog';
+import { readTextFile } from '@tauri-apps/plugin-fs';
+import { parsePlaylist } from '../../state/actions';
+import { DragDropFileUploadDirective } from './drag-drop-file-upload.directive';
 
 @Component({
+    standalone: true,
+    imports: [DragDropFileUploadDirective, MatIconModule, TranslateModule],
     selector: 'app-file-upload',
     templateUrl: './file-upload.component.html',
     styleUrls: ['./file-upload.component.scss'],
 })
 export class FileUploadComponent {
-    /** Array with uploaded files */
-    files: UploadFile[] = [];
-    /** Upload emitter */
-    uploadInput: EventEmitter<UploadInput> = new EventEmitter<UploadInput>();
-    /** Drag over flag */
-    dragOver: boolean;
-    /** ngx-uploader lib options */
-    options: UploaderOptions = {
-        allowedContentTypes: [
-            'application/x-mpegurl',
-            'application/octet-stream',
-            'application/mpegurl',
-            'application/vnd.apple.mpegurl',
-            'application/vnd.apple.mpegurl.audio',
-            'audio/x-mpegurl',
-            'audio/mpegurl',
-        ],
-        concurrency: 1,
-        maxUploads: 1,
-    };
-    /** Emits on reject event */
-    @Output() fileRejected: EventEmitter<string> = new EventEmitter();
-    /** Emits after successful file selection */
-    @Output() fileSelected: EventEmitter<{
+    @Output() fileSelected = new EventEmitter<{
         uploadEvent: Event;
-        file: UploadFile;
-    }> = new EventEmitter();
+        file: File;
+    }>();
+    @Output() fileRejected = new EventEmitter<string>();
+    @Output() addClicked = new EventEmitter<void>();
+    @Output() closeDialog = new EventEmitter<void>();
 
-    /**
-     * Handles file upload
-     * @param output
-     */
-    onUploadOutput(output: UploadOutput): void {
-        if (output.type === 'allAddedToQueue') {
-            if (this.files.length > 0) {
-                const fileReader = new FileReader();
-                fileReader.onload = (uploadEvent) =>
-                    this.fileSelected.emit({
-                        uploadEvent,
-                        file: this.files[0],
-                    });
-                fileReader.readAsText(this.files[0].nativeFile);
-            }
-        } else if (
-            output.type === 'addedToQueue' &&
-            typeof output.file !== 'undefined'
-        ) {
-            this.files.push(output.file);
-        } else if (
-            output.type === 'uploading' &&
-            typeof output.file !== 'undefined'
-        ) {
-            const index = this.files.findIndex(
-                (file) =>
-                    typeof output.file !== 'undefined' &&
-                    file.id === output.file.id
-            );
-            this.files[index] = output.file;
-        } else if (output.type === 'cancelled' || output.type === 'removed') {
-            this.files = this.files.filter(
-                (file: UploadFile) => file !== output.file
-            );
-        } else if (output.type === 'dragOver') {
-            this.dragOver = true;
-        } else if (output.type === 'dragOut') {
-            this.dragOver = false;
-        } else if (output.type === 'drop') {
-            this.dragOver = false;
-        } else if (
-            output.type === 'rejected' &&
-            typeof output.file !== 'undefined'
-        ) {
-            this.fileRejected.emit(output.file.name);
+    private readonly store = inject(Store);
+
+    allowedContentTypes = [
+        'application/mpegurl',
+        'application/x-mpegurl',
+        'application/octet-stream',
+        'application/vnd.apple.mpegurl',
+        'application/vnd.apple.mpegurl.audio',
+        'audio/x-mpegurl',
+        'audio/mpegurl',
+    ];
+
+    async openDialog(fileField: HTMLInputElement) {
+        if (isTauri()) {
+            await open({
+                multiple: false,
+                directory: false,
+                filters: [
+                    {
+                        name: 'Playlist files',
+                        extensions: ['m3u', 'm3u8'],
+                    },
+                ],
+            }).then(async (path) => {
+                const title = path.split('/').pop();
+                const fileContent = await readTextFile(path);
+                this.store.dispatch(
+                    parsePlaylist({
+                        uploadType: 'FILE',
+                        playlist: fileContent,
+                        title,
+                        path,
+                    })
+                );
+                this.closeDialog.emit();
+            });
+        } else {
+            fileField.click();
         }
+    }
+
+    upload(fileList: FileList) {
+        if (!this.allowedContentTypes.includes(fileList[0].type)) {
+            this.fileRejected.emit(fileList[0].name);
+            return;
+        }
+        const fileReader = new FileReader();
+        fileReader.onload = (uploadEvent) =>
+            this.fileSelected.emit({
+                uploadEvent,
+                file: fileList[0],
+            });
+        fileReader.readAsText(fileList[0]);
+        this.addClicked.emit();
     }
 }

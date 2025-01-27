@@ -1,20 +1,62 @@
 import {
+    CdkDragDrop,
+    DragDropModule,
+    moveItemInArray,
+} from '@angular/cdk/drag-drop';
+import { ScrollingModule } from '@angular/cdk/scrolling';
+import { CommonModule, TitleCasePipe } from '@angular/common';
+import {
     Component,
     ElementRef,
     HostListener,
     Input,
     ViewChild,
 } from '@angular/core';
-import { Channel, ChannelStore, ChannelQuery } from '../../../state';
-
-import * as _ from 'lodash';
+import { FormsModule } from '@angular/forms';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatListModule } from '@angular/material/list';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { Observable } from 'rxjs';
+import { MatTabsModule } from '@angular/material/tabs';
+import { Store } from '@ngrx/store';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import * as _ from 'lodash';
+import { map, skipWhile } from 'rxjs';
+import { Channel } from '../../../../../shared/channel.interface';
+import { EpgService } from '../../../services/epg.service';
+import { FilterPipe } from '../../../shared/pipes/filter.pipe';
+import * as PlaylistActions from '../../../state/actions';
+import {
+    selectActivePlaylistId,
+    selectFavorites,
+} from '../../../state/selectors';
+import { ChannelListItemComponent } from './channel-list-item/channel-list-item.component';
 
 @Component({
+    standalone: true,
     selector: 'app-channel-list-container',
     templateUrl: './channel-list-container.component.html',
     styleUrls: ['./channel-list-container.component.scss'],
+    imports: [
+        ChannelListItemComponent,
+        CommonModule,
+        DragDropModule,
+        FilterPipe,
+        FormsModule,
+        MatDividerModule,
+        MatExpansionModule,
+        MatFormFieldModule,
+        MatIconModule,
+        MatInputModule,
+        MatListModule,
+        MatTabsModule,
+        ScrollingModule,
+        TitleCasePipe,
+        TranslateModule,
+    ],
 })
 export class ChannelListContainerComponent {
     /**
@@ -29,21 +71,14 @@ export class ChannelListContainerComponent {
     @Input('channelList')
     set channelList(value: Channel[]) {
         this._channelList = value;
-        this.groupedChannels = _.groupBy(value, 'group.title');
+        this.groupedChannels = _.default.groupBy(value, 'group.title');
     }
 
     /** Object with channels sorted by groups */
-    groupedChannels: { [key: string]: Channel[] };
+    groupedChannels!: { [key: string]: Channel[] };
 
     /** Selected channel */
-    selected: Channel;
-
-    /** List with favorited channels */
-    favorites$: Observable<Channel[]> = this.channelQuery.select((store) =>
-        this.channelQuery
-            .getAll()
-            .filter((channel) => store.favorites.includes(channel.id))
-    );
+    selected!: Channel;
 
     /** Search term for channel filter */
     searchTerm: any = {
@@ -61,16 +96,34 @@ export class ChannelListContainerComponent {
         }
     }
 
-    /**
-     * Creates an instance of ChannelListContainerComponent
-     * @param channelQuery akita's channel query
-     * @param channelStore akita's channel store
-     * @param snackBar service to push snackbar notifications
-     */
+    /** ID of the current playlist */
+    playlistId$ = this.store
+        .select(selectActivePlaylistId)
+        .pipe(
+            skipWhile(
+                (playlistId) => playlistId === '' || playlistId === undefined
+            )
+        );
+
+    /** List with favorites */
+    favorites$ = this.store.select(selectFavorites).pipe(
+        map(
+            (
+                favoriteChannelIds // TODO: move to selector
+            ) =>
+                favoriteChannelIds.map((favoriteChannelId) =>
+                    this.channelList.find(
+                        (channel) => channel.id === favoriteChannelId
+                    )
+                )
+        )
+    );
+
     constructor(
-        private channelQuery: ChannelQuery,
-        private channelStore: ChannelStore,
-        private snackBar: MatSnackBar
+        private readonly store: Store,
+        private snackBar: MatSnackBar,
+        private translateService: TranslateService,
+        private epgService: EpgService
     ) {}
 
     /**
@@ -79,7 +132,13 @@ export class ChannelListContainerComponent {
      */
     selectChannel(channel: Channel): void {
         this.selected = channel;
-        this.channelStore.setActiveChannel(channel);
+        this.store.dispatch(PlaylistActions.setActiveChannel({ channel }));
+
+        const epgChannelId = channel?.tvg?.id?.trim() || channel?.name.trim();
+
+        if (epgChannelId) {
+            this.epgService.getChannelPrograms(epgChannelId);
+        }
     }
 
     /**
@@ -89,16 +148,28 @@ export class ChannelListContainerComponent {
      */
     toggleFavoriteChannel(channel: Channel, clickEvent: MouseEvent): void {
         clickEvent.stopPropagation();
-        this.snackBar.open('Favorites were updated!', null, { duration: 2000 });
-        this.channelStore.updateFavorite(channel);
+        this.snackBar.open(
+            this.translateService.instant('CHANNELS.FAVORITES_UPDATED'),
+            null,
+            { duration: 2000 }
+        );
+        this.store.dispatch(PlaylistActions.updateFavorites({ channel }));
     }
 
-    /**
-     * Required for change detection mechanism to nor re-init the whole component after changes
-     * @param index index of the channel item
-     * @param channel channel object
-     */
-    trackByFn(index: number, channel: Channel): string {
-        return channel.id;
+    trackByFn(_: number, channel: Channel): string {
+        return channel?.id;
+    }
+
+    drop(event: CdkDragDrop<Channel[]>, favorites: Channel[]) {
+        moveItemInArray(favorites, event.previousIndex, event.currentIndex);
+        this.store.dispatch(
+            PlaylistActions.setFavorites({
+                channelIds: favorites.map((item) => item.id),
+            })
+        );
+    }
+
+    ngOnDestroy() {
+        this.store.dispatch(PlaylistActions.setChannels({ channels: [] }));
     }
 }

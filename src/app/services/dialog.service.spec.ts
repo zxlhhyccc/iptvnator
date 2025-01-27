@@ -1,17 +1,19 @@
-import { ConfirmDialogComponent } from './../shared/components/confirm-dialog/confirm-dialog.component';
-import { MockModule, MockComponent } from 'ng-mocks';
+import { inject, TestBed } from '@angular/core/testing';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { TestBed, inject } from '@angular/core/testing';
-import { DialogService } from './dialog.service';
-import { ConfirmDialogData } from '../shared/components/confirm-dialog/confirm-dialog.component';
+import { MockComponent, MockModule } from 'ng-mocks';
 import { EMPTY } from 'rxjs';
+import { ConfirmDialogData } from '../shared/components/confirm-dialog/confirm-dialog-data.interface';
+import { ConfirmDialogComponent } from './../shared/components/confirm-dialog/confirm-dialog.component';
+import { DialogService } from './dialog.service';
 
 describe('Service: Dialog', () => {
     beforeEach(() => {
         TestBed.configureTestingModule({
-            declarations: [MockComponent(ConfirmDialogComponent)],
             providers: [DialogService, MatDialog],
-            imports: [MockModule(MatDialogModule)],
+            imports: [
+                MockModule(MatDialogModule),
+                MockComponent(ConfirmDialogComponent),
+            ],
         });
     });
 
@@ -25,7 +27,9 @@ describe('Service: Dialog', () => {
     it('should open a confirm dialog', inject(
         [MatDialog, DialogService],
         (dialog: MatDialog, service: DialogService) => {
-            spyOn(dialog, 'open').and.returnValue({ afterClosed: () => EMPTY });
+            jest.spyOn(dialog, 'open').mockReturnValue({
+                afterClosed: () => EMPTY,
+            } as any);
             service.openConfirmDialog({
                 title: 'Remove dialog',
                 message: 'Message',

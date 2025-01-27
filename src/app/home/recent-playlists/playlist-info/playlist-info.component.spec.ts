@@ -1,51 +1,66 @@
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { PLAYLIST_SAVE_DETAILS } from './../../../../../shared/ipc-commands';
 /* eslint-disable @typescript-eslint/unbound-method */
-import { ElectronServiceStub } from '../../../services/electron.service.stub';
-import { ElectronService } from './../../../services/electron.service';
-import { TranslatePipe } from '@ngx-translate/core';
-import { MockModule, MockPipe } from 'ng-mocks';
+import { DatePipe } from '@angular/common';
+import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
+import {
+    FormsModule,
+    ReactiveFormsModule,
+    UntypedFormBuilder,
+} from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { ComponentFixture, TestBed, waitForAsync } from '@angular/core/testing';
-import { DatePipe } from '@angular/common';
-import { PlaylistInfoComponent } from './playlist-info.component';
-import { FormsModule, ReactiveFormsModule, FormBuilder } from '@angular/forms';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ActivatedRoute } from '@angular/router';
+import { Actions } from '@ngrx/effects';
+import { provideMockActions } from '@ngrx/effects/testing';
+import { MockStore, provideMockStore } from '@ngrx/store/testing';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { MockModule, MockPipe, MockProvider } from 'ng-mocks';
+import { NgxIndexedDBService } from 'ngx-indexed-db';
+import { Observable } from 'rxjs';
+import { DataService } from '../../../services/data.service';
+import { ElectronServiceStub } from '../../../services/electron.service.stub';
 import { Playlist } from './../../../../../shared/playlist.interface';
+import { PlaylistInfoComponent } from './playlist-info.component';
 
 describe('PlaylistInfoComponent', () => {
     let component: PlaylistInfoComponent;
     let fixture: ComponentFixture<PlaylistInfoComponent>;
-    let electronService: ElectronService;
+    let mockStore: MockStore;
+    const actions$ = new Observable<Actions>();
 
-    beforeEach(
-        waitForAsync(() => {
-            TestBed.configureTestingModule({
-                imports: [
-                    FormsModule,
-                    MockModule(MatDialogModule),
-                    MockModule(MatCheckboxModule),
-                    MockModule(MatFormFieldModule),
-                    ReactiveFormsModule,
-                ],
-                declarations: [
-                    PlaylistInfoComponent,
-                    MockPipe(TranslatePipe),
-                    MockPipe(DatePipe),
-                ],
-                providers: [
-                    { provide: MAT_DIALOG_DATA, useValue: {} },
-                    { provide: ElectronService, useClass: ElectronServiceStub },
-                    FormBuilder,
-                ],
-            }).compileComponents();
-        })
-    );
+    beforeEach(waitForAsync(() => {
+        TestBed.configureTestingModule({
+            imports: [
+                FormsModule,
+                MockModule(MatDialogModule),
+                MockModule(MatCheckboxModule),
+                MockModule(MatFormFieldModule),
+                MockModule(TranslateModule),
+                MockModule(MatSnackBarModule),
+                ReactiveFormsModule,
+            ],
+            declarations: [PlaylistInfoComponent, MockPipe(DatePipe)],
+            providers: [
+                MockProvider(MatSnackBar),
+                { provide: MAT_DIALOG_DATA, useValue: {} },
+                { provide: DataService, useClass: ElectronServiceStub },
+                UntypedFormBuilder,
+                provideMockStore(),
+                provideMockActions(actions$),
+                MockProvider(NgxIndexedDBService),
+                MockProvider(TranslateService),
+                MockProvider(ActivatedRoute, {
+                    snapshot: { params: { id: '' } } as any,
+                }),
+            ],
+        }).compileComponents();
+    }));
 
     beforeEach(() => {
         fixture = TestBed.createComponent(PlaylistInfoComponent);
         component = fixture.componentInstance;
-        electronService = TestBed.inject(ElectronService);
+        mockStore = TestBed.inject(MockStore);
         fixture.detectChanges();
     });
 
@@ -53,14 +68,10 @@ describe('PlaylistInfoComponent', () => {
         expect(component).toBeTruthy();
     });
 
-    it('should send an event to the main process after save', () => {
+    it('should dispatch an event to save changes in the store', () => {
         const playlistToSave = { _id: 'a12345', title: 'Playlist' } as Playlist;
-        spyOn(electronService.ipcRenderer, 'send');
+        jest.spyOn(mockStore, 'dispatch');
         component.saveChanges(playlistToSave);
-        expect(electronService.ipcRenderer.send).toHaveBeenCalledTimes(1);
-        expect(electronService.ipcRenderer.send).toHaveBeenCalledWith(
-            PLAYLIST_SAVE_DETAILS,
-            playlistToSave
-        );
+        expect(mockStore.dispatch).toHaveBeenCalledTimes(1);
     });
 });

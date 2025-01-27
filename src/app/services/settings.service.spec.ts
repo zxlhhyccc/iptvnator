@@ -1,4 +1,5 @@
-import { TestBed, inject } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { inject, TestBed } from '@angular/core/testing';
 import { StorageMap } from '@ngx-pwa/local-storage';
 import { of } from 'rxjs';
 import { Theme } from '../settings/theme.enum';
@@ -9,6 +10,7 @@ describe('Service: Settings', () => {
     beforeEach(() => {
         TestBed.configureTestingModule({
             providers: [SettingsService],
+            imports: [HttpClientTestingModule],
         });
     });
 
@@ -23,7 +25,7 @@ describe('Service: Settings', () => {
         [SettingsService, StorageMap],
         (service: SettingsService, storage: StorageMap) => {
             const version = '2.1.0';
-            spyOn(storage, 'set').and.returnValue(of([]));
+            jest.spyOn(storage, 'set').mockReturnValue(of([] as any));
             service.setValueToLocalStorage(STORE_KEY.Version, version);
             expect(storage.set).toHaveBeenCalledWith(
                 STORE_KEY.Version,
@@ -33,8 +35,8 @@ describe('Service: Settings', () => {
     ));
 
     it('should get value from the local storage', inject(
-        [SettingsService, StorageMap],
-        (service: SettingsService, storage: StorageMap) => {
+        [SettingsService],
+        (service: SettingsService) => {
             const version = '2.1.0';
             service.setValueToLocalStorage(STORE_KEY.Version, version);
             service
@@ -48,8 +50,12 @@ describe('Service: Settings', () => {
     describe('Test theme switch', () => {
         let spyOnAdd, spyOnRemove;
         beforeEach(() => {
-            spyOnAdd = spyOn(document.body.classList, 'add');
-            spyOnRemove = spyOn(document.body.classList, 'remove');
+            spyOnAdd = jest.spyOn(document.body.classList, 'add');
+            spyOnRemove = jest.spyOn(document.body.classList, 'remove');
+        });
+
+        afterEach(() => {
+            jest.clearAllMocks();
         });
 
         it('should switch to the dark theme', inject(
